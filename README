@@ -1,2 +1,10 @@
-This is simple lpc wrapper library.
-There are builds for user / kernel space
+
+--lpclib
+	This is simple lpc wrapper library.
+	There are builds for user / kernel space
+
+--taskmgrdrv
+	Windows driver (simple implementation): Handle userspace IOCTL's, Handle taskmgr.exe loading
+
+--usrapp
+	Windows service and utility app. They are communicate with driver
