@@ -1,0 +1,9 @@
+TARGETNAME=taskmgr_driver
+TARGETPATH=.
+TARGETTYPE=DRIVER
+
+SOURCES= taskmgr_driver.c 	
+	
+
+
+
