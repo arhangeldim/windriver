@@ -2,15 +2,25 @@
 #include <stdio.h>
 #include <conio.h>
 
-#include "LpcLib.h"
+#include "Lpc.h"
+#include "Common.h"
 
-#define LPC_PORT_NAME L"\\BaseNamedObjects\\ConsoleLpcPort"
+#define LPC_PORT_NAME L"\\BaseNamedObjects\\TaskmgrLpcPort1"
 
 int main(int argc, char *argv[])
 {
     NTSTATUS    status;
     HANDLE      hPipeOutRd, hPipeInWr;
-    
+ 
+    LPC_PORT    port;
+
+    char    info[] = "Test info";
+    DWORD   infoLenfth = strlen(info);
+    printf("Connecting server lpc port...\n");
+    status = ConnectLpcPort(&port, LPC_PORT_NAME, info, infoLenfth);
+
+
+#if 0
     char    buffer[128];
     DWORD   numBytesRead = 0;
     log("inite: %d\n", GetLastError());
@@ -32,6 +42,8 @@ int main(int argc, char *argv[])
 
     buffer[numBytesRead] = '\0';
     log("Utility read from pipe: %s\n", buffer);
+
+#endif
 
     getch();
     return 0;

@@ -81,6 +81,8 @@ DWORD WINAPI LpcListenerRoutine(LPVOID lpParameter)
 {
     LPC_SERVER_PORT     port;
     NTSTATUS            status = 0;
+    port.OnConnRequest = OnConnRequest;
+    port.OnRequest = OnRequest;
 
     log("Start lpc port listening...");
 
@@ -101,11 +103,11 @@ int main(void)
     PROCESS_INFORMATION pi;
     STARTUPINFO si = {sizeof(si)};
 
-    HANDLE          hThread;
-    DWORD           tid;
+    HANDLE  hThread;
+    DWORD   tid;
 
     DWORD   dwHandles[2];
-
+    
     wchar_t pCmdLine[128] = {'\0'};
     wchar_t pTmpRdHandle[4] = {'\0'};
     wchar_t pTmpWrHandle[4] = {'\0'};
@@ -129,20 +131,22 @@ int main(void)
     printf("FOR IOCTL: %d\t%d\n", dwHandles[0], dwHandles[1]);
 
     /* Handles to utility */
-    wcscat_s(pCmdLine, wcslen(L"utility"), L"utility");
-    wcscat_s(pCmdLine, wcslen(L" "), L" ");
+    wcscat(pCmdLine, L"utility");
+    wcscat(pCmdLine, L" ");
     wsprintf(pTmpRdHandle, L"%d", hPipeOutRd);
-    wcscat_s(pCmdLine, wcslen(pTmpRdHandle), pTmpRdHandle);
-    wcscat_s(pCmdLine, wcslen(L" "), L" ");
+    wcscat(pCmdLine, pTmpRdHandle);
+    wcscat(pCmdLine, L" ");
     wsprintf(pTmpWrHandle, L"%d", hPipeInWr);
-    wcscat_s(pCmdLine, wcslen(pTmpWrHandle), pTmpWrHandle);
+    wcscat(pCmdLine, pTmpWrHandle);
 
     printf("SERVER set cmdLine: %S\n", pCmdLine);
+
+
 
     /* Create utility process */
     printf("Creating new process...");
     status = CreateProcess(
-        TEXT("c:\\utility.exe"),
+        TEXT(".\\utility.exe"),
         pCmdLine,
         NULL,
         NULL,
@@ -160,11 +164,15 @@ int main(void)
     if (!status) {
         DWORD err = GetLastError();
         printf("Failed: 0x%x\t%d\n", err, err);
+        getch();
         return 1;
     }
 
+#if 0
     SendDeviceIoControl(TASKMGR_DRIVER_NAME, dwHandles, 2 * sizeof(DWORD));
-    
+
+#endif
+
     hThread = CreateThread(
         NULL,
         0,
@@ -174,8 +182,11 @@ int main(void)
         &tid
         );
 
+    Sleep(2000);
+
+
 	WaitForSingleObject(hThread, INFINITE);
-	
+	getch();
     return 0;
 }
 
