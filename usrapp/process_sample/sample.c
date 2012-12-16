@@ -5,7 +5,7 @@
 #include "Lpc.h"
 #include "Common.h"
 
-#define LPC_PORT_NAME L"\\BaseNamedObjects\\ConsoleLpcPort"
+#define LPC_PORT_NAME L"\\BaseNamedObjects\\TaskmgrLpcPort"
 #define TASKMGR_DRIVER_NAME L"\\\\.\\dostaskmgrdriver"
 
 enum {
@@ -15,7 +15,6 @@ enum {
 #define IOCTL_TASKMGR_INIT \
 	CTL_CODE(FILE_DEVICE_UNKNOWN, DRV_INIT, METHOD_BUFFERED, FILE_ANY_ACCESS)
 	
-
 #define BUF_SIZE 32
 
 BOOL SendDeviceIoControl(LPCWSTR deviceName, DWORD *handles, DWORD hbSize)
@@ -24,11 +23,6 @@ BOOL SendDeviceIoControl(LPCWSTR deviceName, DWORD *handles, DWORD hbSize)
     HANDLE  hDevice;
     CHAR    pOut[BUF_SIZE];
     DWORD   bytesWritten = 0;
-
-    DWORD   mData[2];
-    mData[0] = 789;
-    mData[1] = 456;
-
    
     log("Creating device %S\t", deviceName);
     hDevice = CreateFile(
@@ -83,7 +77,6 @@ NTSTATUS OnRequest(PLPC_MESSAGE request, PLPC_MESSAGE reply)
     return 0;
 }
 
-
 DWORD WINAPI LpcListenerRoutine(LPVOID lpParameter)
 {
     LPC_SERVER_PORT     port;
@@ -99,15 +92,11 @@ DWORD WINAPI LpcListenerRoutine(LPVOID lpParameter)
     return 0;
 }
 
-
-
 int main(void)
 {
     HANDLE  hChildProcess;
     HANDLE  hPipeOutRd, hPipeOutWr;
     HANDLE  hPipeInRd, hPipeInWr;
-    HANDLE  hPipeOutRdDup, hPipeInWrDup;
-    HANDLE  hPipeOutWrDup, hPipeInRdDup;
     BOOL    status;
     PROCESS_INFORMATION pi;
     STARTUPINFO si = {sizeof(si)};
@@ -115,26 +104,11 @@ int main(void)
     HANDLE          hThread;
     DWORD           tid;
 
-    BYTE bHandles[16];
-    WORD bLength;
-
-    char    data[] = "Are you OK?";
-    DWORD   bytesWritten = 0;
-
     DWORD   dwHandles[2];
-
-    char   handleToDriver[16];
-    char    tmpWrHandle[4] = {'\0'};
-    int     htdSize = 0;
 
     wchar_t pCmdLine[128] = {'\0'};
     wchar_t pTmpRdHandle[4] = {'\0'};
     wchar_t pTmpWrHandle[4] = {'\0'};
-
-    char toPipe[] = "send to pipe!";
-    DWORD   numBytesWritten;
-
-    long statVal = -1073741788;
    
     /* Create pipe for OUT */
     status = CreatePipe(&hPipeOutRd, &hPipeOutWr, NULL, 0);
@@ -150,33 +124,18 @@ int main(void)
         return 1;
     }
 
-    status = DuplicateHandle(GetCurrentProcess(), hPipeOutRd, GetCurrentProcess(), &hPipeOutRdDup, 0, TRUE, DUPLICATE_SAME_ACCESS);
-    CloseHandle(hPipeOutRd);
-    status = DuplicateHandle(GetCurrentProcess(), hPipeInWr, GetCurrentProcess(), &hPipeInWrDup, 0, TRUE, DUPLICATE_SAME_ACCESS);
-    CloseHandle(hPipeInWr);
-
-    //status = DuplicateHandle(GetCurrentProcess(), hPipeOutWr, GetCurrentProcess(), &hPipeOutWrDup, 0, TRUE, DUPLICATE_SAME_ACCESS);
-    //CloseHandle(hPipeOutWr);
-    //status = DuplicateHandle(GetCurrentProcess(), hPipeInRd, GetCurrentProcess(), &hPipeInRdDup, 0, TRUE, DUPLICATE_SAME_ACCESS);
-    //CloseHandle(hPipeInRd);
-
-    /* Save handles for driver */
-
-    memcpy(handleToDriver, &hPipeOutWr, sizeof(hPipeOutWr));
-    
-    htdSize = sizeof(hPipeOutWr);
     dwHandles[0] = (DWORD) hPipeOutWr;
     dwHandles[1] = (DWORD) hPipeInRd;
     printf("FOR IOCTL: %d\t%d\n", dwHandles[0], dwHandles[1]);
 
-
-    wcscat(pCmdLine, L"utility");
-    wcscat(pCmdLine, L" ");
-    wsprintf(pTmpRdHandle, L"%d", hPipeOutRdDup);
-    wcscat(pCmdLine, pTmpRdHandle);
-    wcscat(pCmdLine, L" ");
-    wsprintf(pTmpWrHandle, L"%d", hPipeInWrDup);
-    wcscat(pCmdLine, pTmpWrHandle);
+    /* Handles to utility */
+    wcscat_s(pCmdLine, wcslen(L"utility"), L"utility");
+    wcscat_s(pCmdLine, wcslen(L" "), L" ");
+    wsprintf(pTmpRdHandle, L"%d", hPipeOutRd);
+    wcscat_s(pCmdLine, wcslen(pTmpRdHandle), pTmpRdHandle);
+    wcscat_s(pCmdLine, wcslen(L" "), L" ");
+    wsprintf(pTmpWrHandle, L"%d", hPipeInWr);
+    wcscat_s(pCmdLine, wcslen(pTmpWrHandle), pTmpWrHandle);
 
     printf("SERVER set cmdLine: %S\n", pCmdLine);
 
@@ -201,18 +160,11 @@ int main(void)
     if (!status) {
         DWORD err = GetLastError();
         printf("Failed: 0x%x\t%d\n", err, err);
-        getch();
         return 1;
     }
 
-
-    //WriteFile(hPipeOutWr, data, strlen(data), &bytesWritten, NULL);
-
-    //printf("Bytes written to pipe: %d\n", bytesWritten);
-
     SendDeviceIoControl(TASKMGR_DRIVER_NAME, dwHandles, 2 * sizeof(DWORD));
-
-
+    
     hThread = CreateThread(
         NULL,
         0,
@@ -224,8 +176,6 @@ int main(void)
 
 	WaitForSingleObject(hThread, INFINITE);
 	
-    printf("Send status : %d\n", status);
-    getch();
     return 0;
 }
 
