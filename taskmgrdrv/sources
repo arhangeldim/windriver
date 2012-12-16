@@ -1,8 +1,9 @@
 TARGETNAME=taskmgr_driver
 TARGETPATH=.
 TARGETTYPE=DRIVER
+TARGETLIBS=c:\klpc.lib
 
-SOURCES= taskmgr_driver.c 	
+SOURCES=taskmgr_driver.c 	
 	
 
 

@@ -3,6 +3,9 @@
 #include "ntifs.h"
 #include <wdm.h>
 
+//#include "common.h"
+//#include "lpc.h"
+
 #define STDCALL __stdcall
 
 #define FILE_DEVICE_TASKMGRDRIVER 0x00008337
@@ -44,6 +47,53 @@ NTSTATUS STDCALL IoCtlTaskmgr(PDEVICE_OBJECT pDeviceObject, PIRP pIrp);
 
 VOID STDCALL CmdUnload(PDRIVER_OBJECT pDriverObject);
 
+HANDLE hPipeToUtility;
+
+/* Called when taskmgr started */
+VOID ImageLoadedNotifyRoutine(IN PUNICODE_STRING	FullImageName,
+								IN HANDLE			ProcessId,
+								IN PIMAGE_INFO		ImageInfo
+								)
+{
+	UNICODE_STRING	usTarget;
+	PVOID			baseAllocatedAddr;
+	PVOID			tmp;
+	NTSTATUS		status = 0;
+	CHAR			buf[] = "Connect...";
+	ULONG			bufLength = sizeof(buf);
+	IO_STATUS_BLOCK	ioStatusBlock;
+	
+	
+	
+	RtlInitUnicodeString(&usTarget, L"\\Device\\HarddiskVolume1\\WINDOWS\\system32\\taskmgr.exe");
+	
+	if (RtlEqualUnicodeString(FullImageName, &usTarget, FALSE)) {
+		DBGBRK();
+		DbgPrint("FullImageName:\t%wZ\tprocess_id: 0x%08x\n", FullImageName, ProcessId);
+		DbgPrint("ImageInfo:\tImageSize: %d\tBase: 0x%08x\n", ImageInfo->ImageSize, ImageInfo->ImageBase);
+			
+		//tmp = VirtualAllocEx(ProcessId, NULL, 4, MEM_COMMIT, PAGE_READWRITE);
+		
+		status = ZwWriteFile(
+				hPipeToUtility,
+				NULL,
+				NULL,
+				NULL,
+				&ioStatusBlock,
+				buf,
+				bufLength,
+				NULL,
+				NULL);
+		
+		
+		
+		
+	}
+}
+
+
+
+
 NTSTATUS CompleteIrp(PIRP Irp, NTSTATUS status, ULONG info)
 {
 	Irp->IoStatus.Status = status;
@@ -82,16 +132,18 @@ NTSTATUS HandleTaskmgrInit(PIRP pIrp, PIO_STACK_LOCATION pIoStackLocation, ULONG
 	ULONG		dwDataRead, dwDataWritten;
 	HANDLE		hPipeOutWr = (HANDLE) -1;
 	HANDLE		hPipeInRd = (HANDLE) -1;
-	FILE_OBJECT	file;
+	PFILE_OBJECT	pFile;
 	HANDLE		hKePipeOutWr;
-		
+	IO_STATUS_BLOCK	ioStatusBlock;
+	
+	CHAR 	super[] = "super";
+	ULONG	superLength = 6;
 	
 	/* TODO: rewrite this */
 	PCHAR pReturnData = "IOCTL - Direct Out I/O From Kernel!";
     ULONG dwDataSize = sizeof("IOCTL - Direct Out I/O From Kernel!");
 	
-	memset(&file, 0, sizeof(file));
-	
+		
 	pInBuffer = pIrp->AssociatedIrp.SystemBuffer;
 	pOutBuffer = pIrp->AssociatedIrp.SystemBuffer;
 	
@@ -109,10 +161,10 @@ NTSTATUS HandleTaskmgrInit(PIRP pIrp, PIO_STACK_LOCATION pIoStackLocation, ULONG
 		
 		status = ObReferenceObjectByHandle(
 			hPipeOutWr,
-			0,
-			*IoFileObjectType,
-			UserMode,
-			(PVOID) &file,
+			FILE_READ_DATA | FILE_WRITE_DATA,
+			NULL,
+			KernelMode,
+			(PVOID *) &pFile,
 			NULL
 			);
 		DBGBRK();
@@ -122,19 +174,40 @@ NTSTATUS HandleTaskmgrInit(PIRP pIrp, PIO_STACK_LOCATION pIoStackLocation, ULONG
 			return status;
 		
 		// 0n-1073741788
-	    /* STATUS = 0xc0000024 - STATUS_OBJECT_TYPE_MISMATCH */
+	        /* STATUS = 0xc0000024 - STATUS_OBJECT_TYPE_MISMATCH */
+		/* STATUS = 0n-1073741790 - ACCESS DENIED */
  		status = ObOpenObjectByPointer(
-			&file,
+			pFile,
 			OBJ_KERNEL_HANDLE,
 			NULL,
-			0,
-			*IoFileObjectType, // -> NULL
-			UserMode,  // -> KernelMode
-			&hKePipeOutWr
+			FILE_READ_DATA | FILE_WRITE_DATA,
+			NULL,
+			KernelMode,
+			&hPipeToUtility	//&hKePipeOutWr
 			);
 		
 		DbgPrint("ObOpenObjectByPointer: 0x%x\n", status);
 		
+		DBGBRK();
+		
+		
+		/*
+		// Try to write to pipe
+		if (NT_SUCCESS(status)) {
+			status = ZwWriteFile(
+				hKePipeOutWr,
+				NULL,
+				NULL,
+				NULL,
+				&ioStatusBlock,
+				super,
+				superLength,
+				NULL,
+				NULL);
+		
+			DbgPrint("Write status: %x\n", status);
+		}
+		*/
 	}
 
 
@@ -174,11 +247,7 @@ NTSTATUS STDCALL DriverEntry(
 
 	status = STATUS_SUCCESS;
 	
-	
-	
-	
 	DBGBRK();
-	
 		
 	pDriverObject->DriverUnload = CmdUnload;
 	pDriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = IoCtlTaskmgr;
@@ -219,8 +288,9 @@ NTSTATUS STDCALL DriverEntry(
 		
 	DbgPrint("Create link status = %x\n", status);	
 	
+	/* Wait for taskmgr started */
+	PsSetLoadImageNotifyRoutine(ImageLoadedNotifyRoutine);
 
-	
 	return status;	
 }
 
