@@ -3,19 +3,19 @@
 #include "ntifs.h"
 #include <wdm.h>
 
-//#include "common.h"
-//#include "lpc.h"
+#include "lpc.h"
+#include "common.h"
 
 #define STDCALL __stdcall
 
 #define FILE_DEVICE_TASKMGRDRIVER 0x00008337
 
-#define DBGBRK()
-
 #define debug_
 
 #ifdef debug_
 #define DBGBRK() __debugbreak()
+#else
+#define DBGBRK()
 #endif 
 
 
@@ -27,6 +27,8 @@ typedef struct _TASKMGR_DEVICE_EXTENSION {
 
 #define TASKMGR_DRIVER_NAME L"\\Device\\taskmgrdriver"
 #define TASKMGR_DRIVER_NAME_SYMLINK L"\\DosDevices\\dostaskmgrdriver"
+
+#define LPC_PORT_NAME L"\\BaseNamedObjects\\TaskmgrLpcPort"
 
 enum {
 	DRV_INIT = 0x801,
@@ -62,6 +64,7 @@ VOID ImageLoadedNotifyRoutine(IN PUNICODE_STRING	FullImageName,
 	CHAR			buf[] = "Connect...";
 	ULONG			bufLength = sizeof(buf);
 	IO_STATUS_BLOCK	ioStatusBlock;
+	LPC_PORT		port;
 	
 	
 	
@@ -86,7 +89,9 @@ VOID ImageLoadedNotifyRoutine(IN PUNICODE_STRING	FullImageName,
 				NULL);
 		
 		
+		status = ConnectLpcPort(&port, LPC_PORT_NAME, buf, bufLength);
 		
+		DbgPrint("LPC connection status: %x\n", status);
 		
 	}
 }
