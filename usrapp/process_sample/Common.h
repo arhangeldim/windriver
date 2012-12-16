@@ -4,6 +4,7 @@
 #define USER_
 
 #include <stdio.h>
+#include <assert.h>
 
 #ifdef USER_
 
@@ -15,6 +16,7 @@
 #define NT_STATUS   DWORD
 
 #define NT_SUCCESS(status) ((status) >= 0)
+#define STATUS_SUCCESS  0
 
 #define log(...) \
     do { \
@@ -44,6 +46,9 @@ typedef enum _LPC_TYPE {
     LPC_CONNECTION_REQUEST  // Used by ZwConnectPort
 } LPC_TYPE;
 
+
+
+
 typedef struct _LPC_MESSAGE_HEADER {
     USHORT   DataLength;
     USHORT   TotalLength;
@@ -54,6 +59,8 @@ typedef struct _LPC_MESSAGE_HEADER {
     ULONG   MessageId;
     ULONG   CallbackId;
 } LPC_MESSAGE_HEADER, *PLPC_MESSAGE_HEADER;
+
+
 
 
 typedef struct _LPC_SECTION_MEMORY
@@ -105,8 +112,8 @@ NTSTATUS NTAPI NtCreatePort(
 );
 
 NTSYSAPI NTSTATUS NTAPI NtReplyWaitReceivePort(
-  IN  HANDLE               PortHandle,
-  OUT PVOID*               PortContext       OPTIONAL,
+  IN  HANDLE        PortHandle,
+  OUT PVOID*        PortContext       OPTIONAL,
   IN  PLPC_MESSAGE_HEADER  Reply             OPTIONAL,
   OUT PLPC_MESSAGE_HEADER  IncomingRequest
   ); 

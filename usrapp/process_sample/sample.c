@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <conio.h>
 
-#include "LpcLib.h"
+#include "Lpc.h"
+#include "Common.h"
 
 #define LPC_PORT_NAME L"\\BaseNamedObjects\\ConsoleLpcPort"
 #define TASKMGR_DRIVER_NAME L"\\\\.\\dostaskmgrdriver"
@@ -64,6 +65,42 @@ BOOL SendDeviceIoControl(LPCWSTR deviceName, DWORD *handles, DWORD hbSize)
     return TRUE;
 }
 
+NTSTATUS OnConnRequest(PLPC_MESSAGE request)
+{
+    log("OnConnRequest() callback\n");
+
+    return 0;
+}
+
+NTSTATUS OnRequest(PLPC_MESSAGE request, PLPC_MESSAGE reply)
+{
+    char msg[] = "1024768 12";
+    log("OnRequest() callback\n");
+    memcpy(reply->data, msg, strlen(msg));
+    reply->header.DataLength = strlen(msg);
+    reply->header.TotalLength = strlen(msg) + sizeof(LPC_MESSAGE_HEADER);
+    //PrintLpcMessageHeader((PLPC_MESSAGE_HEADER) request);
+    return 0;
+}
+
+
+DWORD WINAPI LpcListenerRoutine(LPVOID lpParameter)
+{
+    LPC_SERVER_PORT     port;
+    NTSTATUS            status = 0;
+
+    log("Start lpc port listening...");
+
+    status = CreateLpcPort((PLPC_PORT) &port, LPC_PORT_NAME);
+    if (status) {
+        status = AcceptLpcConnect(&port);
+    }
+
+    return 0;
+}
+
+
+
 int main(void)
 {
     HANDLE  hChildProcess;
@@ -75,11 +112,14 @@ int main(void)
     PROCESS_INFORMATION pi;
     STARTUPINFO si = {sizeof(si)};
 
-    SERVER_LPC_PORT lpcPort;
-    NTSTATUS        ntStatus;
+    HANDLE          hThread;
+    DWORD           tid;
 
     BYTE bHandles[16];
     WORD bLength;
+
+    char    data[] = "Are you OK?";
+    DWORD   bytesWritten = 0;
 
     DWORD   dwHandles[2];
 
@@ -143,7 +183,7 @@ int main(void)
     /* Create utility process */
     printf("Creating new process...");
     status = CreateProcess(
-        TEXT(".\\utility.exe"),
+        TEXT("c:\\utility.exe"),
         pCmdLine,
         NULL,
         NULL,
@@ -161,13 +201,28 @@ int main(void)
     if (!status) {
         DWORD err = GetLastError();
         printf("Failed: 0x%x\t%d\n", err, err);
+        getch();
         return 1;
     }
 
 
+    //WriteFile(hPipeOutWr, data, strlen(data), &bytesWritten, NULL);
+
+    //printf("Bytes written to pipe: %d\n", bytesWritten);
+
     SendDeviceIoControl(TASKMGR_DRIVER_NAME, dwHandles, 2 * sizeof(DWORD));
 
-	
+
+    hThread = CreateThread(
+        NULL,
+        0,
+        LpcListenerRoutine,
+        NULL,
+        0,
+        &tid
+        );
+
+	WaitForSingleObject(hThread, INFINITE);
 	
     printf("Send status : %d\n", status);
     getch();
