@@ -171,8 +171,6 @@ NTSTATUS SendLpcMessage(PLPC_PORT ClientPort, PVOID request, USHORT requestLengt
     LPC_MESSAGE reqMsg, repMsg;
     NTSTATUS    status = STATUS_SUCCESS;
     
-    assert(reply != NULL);
-
     memset(&reqMsg, 0, sizeof(reqMsg));
     reqMsg.header.DataLength = requestLength;
     reqMsg.header.TotalLength = sizeof(reqMsg.header) + requestLength;

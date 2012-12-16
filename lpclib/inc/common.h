@@ -89,6 +89,9 @@ typedef struct _OBJECT_ATTRIBUTES
   PVOID SecurityDescriptor;      
   PVOID SecurityQualityOfService;
 } OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
+
+VOID NTAPI RtlInitUnicodeString (PUNICODE_STRING DestinationString, PCWSTR SourceString);
+
 #endif
 
 
@@ -101,8 +104,6 @@ typedef struct _OBJECT_ATTRIBUTES
     (p)->SecurityDescriptor = s;                        \
     (p)->SecurityQualityOfService = NULL;               \
     }
-
-VOID NTAPI RtlInitUnicodeString (PUNICODE_STRING DestinationString, PCWSTR SourceString);
 
 NTSTATUS NTAPI NtCreatePort(
     OUT PHANDLE              PortHandle,
