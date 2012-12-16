@@ -2,7 +2,7 @@
 #include "Lpc.h"
 
 #define MAX_CONNECT_INFO_SIZE   0x104
-#define LPC_PORT_NAME L"\\BaseNamedObjects\\DriverLpcPort"
+//#define LPC_PORT_NAME L"\\BaseNamedObjects\\DriverLpcPort"
 
 /* Offset in request message from client to server on Creating Client Port */
 #define DATA_OFFSET 0x0
@@ -147,7 +147,7 @@ NTSTATUS ConnectLpcPort(PLPC_PORT LpcPort, LPCWSTR PortName, PVOID ConnectInfo, 
     };
 
     RtlInitUnicodeString(&usPortName, PortName);
-    log("Connecting to port: %S\n", LPC_PORT_NAME);
+    log("Connecting to port: %S\n", PortName);
     status = NtConnectPort(
         &LpcPort->hPort,
         &usPortName,
