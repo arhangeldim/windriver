@@ -1,12 +1,12 @@
 #ifndef COMMON_H_
 #define COMMON_H_
 
-#define USER_
+//#define USER_MODE_
 
 #include <stdio.h>
 #include <assert.h>
 
-#ifdef USER_
+#ifdef USER_MODE_
 
 #include <windows.h>
 #include <ntsecapi.h>
@@ -23,15 +23,16 @@
         printf(__VA_ARGS__); } \
     while (0)
 #else
+#include "ntddk.h"
+#define BYTE	CHAR
+#define INVALID_HANDLE_VALUE	(HANDLE) -1
+
 #define log(...) \
     do { \
         DbgPrint(__VA_ARGS__); } \
     while(0)
 #endif /* USER_ */
-
-
-
-
+            
 typedef enum _LPC_TYPE {
     LPC_NEW_MESSAGE,    // A new message
     LPC_REQUEST,        // A request message
@@ -45,9 +46,6 @@ typedef enum _LPC_TYPE {
     LPC_ERROR_EVENT,    // Used by ZwRaiseHardError
     LPC_CONNECTION_REQUEST  // Used by ZwConnectPort
 } LPC_TYPE;
-
-
-
 
 typedef struct _LPC_MESSAGE_HEADER {
     USHORT   DataLength;
@@ -81,6 +79,7 @@ typedef struct _LPC_SECTION_OWNER_MEMORY
 } LPC_SECTION_OWNER_MEMORY, *PLPC_SECTION_OWNER_MEMORY;
 
 
+#ifdef USER_MODE_
 typedef struct _OBJECT_ATTRIBUTES 
 {
   ULONG Length;
@@ -90,6 +89,8 @@ typedef struct _OBJECT_ATTRIBUTES
   PVOID SecurityDescriptor;      
   PVOID SecurityQualityOfService;
 } OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
+#endif
+
 
 /* OBJECT_ATTRIBUTES helper */
 #define InitializeObjectAttributes( p, n, a, r, s ) { \

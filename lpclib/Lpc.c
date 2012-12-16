@@ -61,9 +61,10 @@ NTSTATUS AcceptLpcConnect(PLPC_SERVER_PORT LpcPort)
 {
     NTSTATUS    status = STATUS_SUCCESS;
     LPC_MESSAGE reqMsg, repMsg;
+	BOOLEAN		bAccept;
     HANDLE      hPort = INVALID_HANDLE_VALUE;
     PHANDLE     phPort = &hPort;
-    BOOLEAN     bAccept;
+    
 
     memset(&repMsg, 0, sizeof(LPC_MESSAGE));
     memset(&reqMsg, 0, sizeof(LPC_MESSAGE));
